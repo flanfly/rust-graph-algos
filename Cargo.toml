@@ -1,0 +1,4 @@
+[package]
+name = "rgl"
+version = "0.1.0"
+authors = ["seu <seu@panopticon.re>"]
