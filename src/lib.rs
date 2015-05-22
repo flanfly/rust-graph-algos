@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::slice::Iter;
 
-#[derive(PartialEq,Eq,Hash,Copy,Clone)]
+#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
 pub struct GraphVertexDescriptor(pub usize);
-#[derive(PartialEq,Eq,Hash,Copy,Clone)]
+#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
 pub struct GraphEdgeDescriptor(pub usize);
 
 pub struct Graph<N,E> {
@@ -245,115 +245,129 @@ mod test {
         assert!(g.vertices().any(|ref x| g.vertex_label(x) != Some(&69)));
     }
 
-    /*fn test_usage()
+    #[test]
+    fn test_usage()
     {
-        po::digraph<int,std::string> g;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g);
-        auto n2 = add_vertex(13,g);
-        auto n3 = add_vertex(1337,g);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(1337);
 
-        auto e12 = add_edge(string("a"),n1,n2,g);
-        auto e23 = add_edge(string("b"),n2,n3,g);
-        auto e31 = add_edge(string("c"),n3,n1,g);
+        let e12 = match g.add_edge("a".to_string(),n1,n2) {
+            Some(x) => x,
+            None => { assert!(false); GraphEdgeDescriptor(0) }
+        };
+        let e23 = match g.add_edge("b".to_string(),n2,n3) {
+            Some(x) => x,
+            None => { assert!(false); GraphEdgeDescriptor(0) }
+        };
+        let e31 = match g.add_edge("c".to_string(),n3,n1) {
+            Some(x) => x,
+            None => { assert!(false); GraphEdgeDescriptor(0) }
+        };
 
-        ASSERT_NE(n1, n2);
-        ASSERT_NE(n1, n3);
-        ASSERT_NE(n2, n3);
+        assert!(n1 != n2);
+        assert!(n1 != n3);
+        assert!(n2 != n3);
 
-        ASSERT_NE(e12, e23);
-        ASSERT_NE(e12, e31);
-        ASSERT_NE(e23, e31);
+        assert!(e12 != e23);
+        assert!(e12 != e31);
+        assert!(e23 != e31);
 
-        ASSERT_EQ(get_vertex(n1,g), 42);
-        ASSERT_EQ(get_vertex(n2,g), 13);
-        ASSERT_EQ(get_vertex(n3,g), 1337);
+        assert!(g.vertex_label(&n1) == Some(&42));
+        assert!(g.vertex_label(&n2) == Some(&13));
+        assert!(g.vertex_label(&n3) == Some(&1337));
 
-        ASSERT_EQ(get_edge(e12,g), string("a"));
-        ASSERT_EQ(get_edge(e23,g), string("b"));
-        ASSERT_EQ(get_edge(e31,g), string("c"));
+        assert!(g.edge_label(&e12) == Some(&"a".to_string()));
+        assert!(g.edge_label(&e23) == Some(&"b".to_string()));
+        assert!(g.edge_label(&e31) == Some(&"c".to_string()));
 
-        ASSERT_EQ(num_edges(g), 3u);
-        ASSERT_EQ(num_vertices(g), 3u);
+        assert_eq!(3,g.num_edges());
+        assert_eq!(3,g.num_vertices());
 
-        ASSERT_EQ(source(e12,g), n1);
-        ASSERT_EQ(target(e12,g), n2);
-        ASSERT_EQ(source(e23,g), n2);
-        ASSERT_EQ(target(e23,g), n3);
-        ASSERT_EQ(source(e31,g), n3);
-        ASSERT_EQ(target(e31,g), n1);
+        assert_eq!(g.source(&e12), n1);
+        assert_eq!(g.target(&e12), n2);
+        assert_eq!(g.source(&e23), n2);
+        assert_eq!(g.target(&e23), n3);
+        assert_eq!(g.source(&e31), n3);
+        assert_eq!(g.target(&e31), n1);
 
-        ASSERT_EQ(out_degree(n1,g), 1u);
-        ASSERT_EQ(out_degree(n2,g), 1u);
-        ASSERT_EQ(out_degree(n3,g), 1u);
+        assert_eq!(g.out_degree(&n1), 1);
+        assert_eq!(g.out_degree(&n2), 1);
+        assert_eq!(g.out_degree(&n3), 1);
 
-        remove_edge(e12,g);
+        g.remove_edge(&e12);
 
-        remove_vertex(n1,g);
-        remove_vertex(n2,g);
-        remove_vertex(n3,g);
+        g.remove_vertex(&n1);
+        g.remove_vertex(&n2);
+        g.remove_vertex(&n3);
 
-        ASSERT_EQ(num_vertices(g), 0u);
-        ASSERT_EQ(num_edges(g), 0u);
+        assert_eq!(g.num_vertices(), 0);
+        assert_eq!(g.num_edges(), 0);
     }
 
+    #[test]
     fn test_degree()
     {
-        po::digraph<boost::optional<int>,std::string> g;
+        let mut g = Graph::<Option<isize>,String>::new();
 
-        auto n1 = add_vertex(boost::make_optional(42),g);
-        auto n2 = add_vertex(boost::optional<int>(boost::none),g);
-        auto n3 = add_vertex(boost::make_optional(42),g);
+        let n1 = g.add_vertex(Some(42));
+        let n2 = g.add_vertex(None);
+        let n3 = g.add_vertex(Some(42));
 
-        add_edge(string("a"),n1,n2,g);
-        auto e23 = add_edge(string("a"),n2,n3,g);
-        add_edge(string("a"),n3,n1,g);
+        assert!(g.add_edge("a".to_string(),n1,n2) != None);
+        let e23 = match g.add_edge("a".to_string(),n2,n3) {
+            Some(x) => x,
+            None => { assert!(false); GraphEdgeDescriptor(0) }
+        };
+        assert!(g.add_edge("a".to_string(),n3,n1) != None);
 
-        ASSERT_EQ(in_degree(n1,g),1u);
-        ASSERT_EQ(in_degree(n2,g),1u);
-        ASSERT_EQ(in_degree(n3,g),1u);
+        assert_eq!(g.in_degree(&n1),1);
+        assert_eq!(g.in_degree(&n2),1);
+        assert_eq!(g.in_degree(&n3),1);
 
-        ASSERT_EQ(out_degree(n1,g),1u);
-        ASSERT_EQ(out_degree(n2,g),1u);
-        ASSERT_EQ(out_degree(n3,g),1u);
+        assert_eq!(g.out_degree(&n1),1);
+        assert_eq!(g.out_degree(&n2),1);
+        assert_eq!(g.out_degree(&n3),1);
 
-        auto n4 = add_vertex(boost::make_optional(42),g);
-        add_edge(string("d"),n4,n1,g);
+        let n4 = g.add_vertex(Some(42));
+        assert!(g.add_edge("d".to_string(),n4,n1) != None);
 
-        ASSERT_EQ(in_degree(n1,g),2u);
-        ASSERT_EQ(in_degree(n2,g),1u);
-        ASSERT_EQ(in_degree(n3,g),1u);
-        ASSERT_EQ(in_degree(n4,g),0u);
+        assert_eq!(g.in_degree(&n1),2);
+        assert_eq!(g.in_degree(&n2),1);
+        assert_eq!(g.in_degree(&n3),1);
+        assert_eq!(g.in_degree(&n4),0);
 
-        ASSERT_EQ(out_degree(n1,g),1u);
-        ASSERT_EQ(out_degree(n2,g),1u);
-        ASSERT_EQ(out_degree(n3,g),1u);
-        ASSERT_EQ(out_degree(n4,g),1u);
+        assert_eq!(g.out_degree(&n1),1);
+        assert_eq!(g.out_degree(&n2),1);
+        assert_eq!(g.out_degree(&n3),1);
+        assert_eq!(g.out_degree(&n4),1);
 
-        remove_edge(e23,g);
-        add_edge(string("d1"),n3,n2,g);
+        g.remove_edge(&e23);
+        g.add_edge("d1".to_string(),n3,n2);
 
-        auto n5 = add_vertex(boost::optional<int>(boost::none),g);
-        add_edge(string("d1"),n2,n5,g);
-        add_edge(string("d2"),n5,n3,g);
-        add_edge(string("d2"),n5,n4,g);
+        let n5 = g.add_vertex(None);
+        g.add_edge("d1".to_string(),n2,n5);
+        g.add_edge("d2".to_string(),n5,n3);
+        g.add_edge("d2".to_string(),n5,n4);
 
-        ASSERT_EQ(in_degree(n1,g),2u);
-        ASSERT_EQ(in_degree(n2,g),2u);
-        ASSERT_EQ(in_degree(n3,g),1u);
-        ASSERT_EQ(in_degree(n4,g),1u);
-        ASSERT_EQ(in_degree(n5,g),1u);
+        assert_eq!(g.in_degree(&n1),2);
+        assert_eq!(g.in_degree(&n2),2);
+        assert_eq!(g.in_degree(&n3),1);
+        assert_eq!(g.in_degree(&n4),1);
+        assert_eq!(g.in_degree(&n5),1);
 
-        ASSERT_EQ(out_degree(n1,g),1u);
-        ASSERT_EQ(out_degree(n2,g),1u);
-        ASSERT_EQ(out_degree(n3,g),2u);
-        ASSERT_EQ(out_degree(n4,g),1u);
-        ASSERT_EQ(out_degree(n5,g),2u);
+        assert_eq!(g.out_degree(&n1),1);
+        assert_eq!(g.out_degree(&n2),1);
+        assert_eq!(g.out_degree(&n3),2);
+        assert_eq!(g.out_degree(&n4),1);
+        assert_eq!(g.out_degree(&n5),2);
 
-        auto p = edges(g);
-        ASSERT_EQ(std::distance(p.first,p.second),7);
+        assert_eq!(g.edges().len(),7);
     }
 
+    /*#[test]
     fn test_out_iterator()
     {
         po::digraph<int,std::string> g;
@@ -383,6 +397,7 @@ mod test {
         ASSERT_EQ(i.first, i.second);
     }
 
+    #[test]
     fn test_in_iterator()
     {
         po::digraph<int,std::string> g;
@@ -414,6 +429,7 @@ mod test {
         ASSERT_EQ(i.first + 1, i.second);
     }
 
+    #[test]
     fn test_adj_iterator()
     {
         po::digraph<int,std::string> g;
@@ -445,6 +461,7 @@ mod test {
         ASSERT_EQ(std::distance(i.first ,i.second), 1);
     }
 
+    #[test]
     fn test_iterators()
     {
         po::digraph<int,std::string> g;
@@ -471,6 +488,7 @@ mod test {
         ASSERT_EQ(es.size(), 4u);
     }
 
+    #[test]
     fn test_error()
     {
         po::digraph<int,std::string> g1,g2;
@@ -486,6 +504,7 @@ mod test {
         ASSERT_EQ(num_vertices(g1), 3u);
     }
 
+    #[test]
     fn test_remove_edge_from_node_with_multiple_out_edges()
     {
         po::digraph<int,std::string> g;
