@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::slice::Iter;
+use std::clone::Clone;
 
 #[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
-pub struct GraphVertexDescriptor(pub usize);
+struct GraphVertexDescriptor(pub usize);
 #[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
-pub struct GraphEdgeDescriptor(pub usize);
+struct GraphEdgeDescriptor(pub usize);
 
 pub struct Graph<N,E> {
     vertex_labels:  HashMap<GraphVertexDescriptor,N>,
@@ -23,9 +24,9 @@ pub struct GraphAdjacency {
 pub trait Digraph<'a,V,E> {
     type Vertex;
     type Edge;
-    type Vertices: Iterator<Item=&'a Self::Vertex>;
-    type Edges: Iterator<Item=&'a Self::Edge>;
-    type Incidence: Iterator<Item=&'a Self::Edge>;
+    type Vertices: Iterator<Item=Self::Vertex>;
+    type Edges: Iterator<Item=Self::Edge>;
+    type Incidence: Iterator<Item=Self::Edge>;
     type Adjacency: Iterator<Item=Self::Vertex>;
 
     fn new() -> Self;
@@ -65,9 +66,9 @@ impl Iterator for GraphAdjacency {
 impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
     type Vertex = GraphVertexDescriptor;
     type Edge = GraphEdgeDescriptor;
-    type Vertices = std::collections::hash_map::Keys<'a, Self::Vertex, V>;
-    type Edges = std::collections::hash_map::Keys<'a, Self::Edge, E>;
-    type Incidence = std::slice::Iter<'a, Self::Edge>;
+    type Vertices = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Vertex, V>,fn(&Self::Vertex) -> Self::Vertex>;
+    type Edges = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Edge, E>,fn(&Self::Edge) -> Self::Edge>;
+    type Incidence = std::iter::Map<std::slice::Iter<'a, Self::Edge>,fn(&Self::Edge) -> Self::Edge>;
     type Adjacency = GraphAdjacency;
 
     fn new() -> Self {
@@ -184,11 +185,11 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
     }
 
     fn vertices(&'a self) -> Self::Vertices {
-        return self.vertex_labels.keys();
+        return self.vertex_labels.keys().map(std::clone::Clone::clone);
     }
 
     fn edges(&'a self) -> Self::Edges {
-        return self.edge_labels.keys();
+        return self.edge_labels.keys().map(std::clone::Clone::clone);
     }
 
     fn out_degree(&self, v: Self::Vertex) -> usize {
@@ -212,11 +213,11 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
     }
 
     fn out_edges(&'a self, v: Self::Vertex) -> Self::Incidence {
-        return self.out_edges.get(&v).unwrap().iter();
+        return self.out_edges.get(&v).unwrap().iter().map(std::clone::Clone::clone);
     }
 
     fn in_edges(&'a self, v: Self::Vertex) -> Self::Incidence {
-        return self.in_edges.get(&v).unwrap().iter();
+        return self.in_edges.get(&v).unwrap().iter().map(std::clone::Clone::clone);
     }
 
     fn adjacent_vertices(&self, v: Self::Vertex) -> Self::Adjacency {
@@ -224,6 +225,7 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
             self.out_edges.get(&v).unwrap().iter().map(|&x| return self.target(x)).chain(
                 self.in_edges.get(&v).unwrap().iter().map(|&x| return self.source(x))).collect()) };
     }
+
 }
 
 #[cfg(test)]
@@ -257,15 +259,15 @@ mod test {
 
         let e12 = match g.add_edge("a".to_string(),n1,n2) {
             Some(x) => x,
-            None => { assert!(false); GraphEdgeDescriptor(0) }
+            None => { assert!(false); Graph::Edge(0) }
         };
         let e23 = match g.add_edge("b".to_string(),n2,n3) {
             Some(x) => x,
-            None => { assert!(false); GraphEdgeDescriptor(0) }
+            None => { assert!(false); Graph::Edge(0) }
         };
         let e31 = match g.add_edge("c".to_string(),n3,n1) {
             Some(x) => x,
-            None => { assert!(false); GraphEdgeDescriptor(0) }
+            None => { assert!(false); Graph::Edge(0) }
         };
 
         assert!(n1 != n2);
@@ -320,7 +322,7 @@ mod test {
         assert!(g.add_edge("a".to_string(),n1,n2) != None);
         let e23 = match g.add_edge("a".to_string(),n2,n3) {
             Some(x) => x,
-            None => { assert!(false); GraphEdgeDescriptor(0) }
+            None => { assert!(false); Graph::Edge(0) }
         };
         assert!(g.add_edge("a".to_string(),n3,n1) != None);
 
@@ -385,11 +387,11 @@ mod test {
 
         assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        let i = g.out_edges(n1).collect::<Vec<&GraphEdgeDescriptor>>();
+        let i = g.out_edges(n1).collect::<Vec<&Graph::Edge>>();
         assert!(i == vec![&e12.unwrap(),&e14.unwrap()] ||
                 i == vec![&e14.unwrap(),&e12.unwrap()]);
 
-        let i = g.out_edges(n2).collect::<Vec<&GraphEdgeDescriptor>>();
+        let i = g.out_edges(n2).collect::<Vec<&Graph::Edge>>();
         assert!(i == vec![&e23.unwrap(),&e21.unwrap()] ||
                 i == vec![&e21.unwrap(),&e23.unwrap()]);
 
@@ -414,16 +416,16 @@ mod test {
 
         assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        let i = g.out_edges(n1).collect::<Vec<&GraphEdgeDescriptor>>();
+        let i = g.out_edges(n1).collect::<Vec<&Graph::Edge>>();
         assert!(i == vec![&e21.unwrap()]);
 
-        let i = g.in_edges(n2).collect::<Vec<&GraphEdgeDescriptor>>();
+        let i = g.in_edges(n2).collect::<Vec<&Graph::Edge>>();
         assert!(i == vec![&e12.unwrap()]);
 
-        let i = g.in_edges(n3).collect::<Vec<&GraphEdgeDescriptor>>();
+        let i = g.in_edges(n3).collect::<Vec<&Graph::Edge>>();
         assert!(i == vec![&e23.unwrap()]);
 
-        let i = g.in_edges(n4).collect::<Vec<&GraphEdgeDescriptor>>();
+        let i = g.in_edges(n4).collect::<Vec<&Graph::Edge>>();
         assert!(i == vec![&e14.unwrap()]);
     }
 
@@ -442,16 +444,16 @@ mod test {
         g.add_edge("c".to_string(),n2,n1);
         g.add_edge("d".to_string(),n1,n4);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
         assert!(i == vec![n2,n4] || i == vec![n4,n2]);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
         assert!(i == vec![n1,n3] || i == vec![n3,n1]);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
         assert!(i == vec![n2]);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
         assert!(i == vec![n1]);
     }
 
@@ -472,11 +474,11 @@ mod test {
 
         assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        let vs = g.vertices().collect::<HashSet<&GraphVertexDescriptor>>();
+        let vs = g.vertices().collect::<HashSet<&Graph::Vertex>>();
         assert!(vs.contains(&n1) && vs.contains(&n2) && vs.contains(&n3) && vs.contains(&n4));
         assert_eq!(vs.len(), 4);
 
-        let es = g.edges().collect::<HashSet<&GraphEdgeDescriptor>>();
+        let es = g.edges().collect::<HashSet<&Graph::Edge>>();
         assert!(es.contains(&e12.unwrap()) && es.contains(&e23.unwrap()) &&
                 es.contains(&e21.unwrap()) && es.contains(&e14.unwrap()));
         assert_eq!(es.len(), 4);
