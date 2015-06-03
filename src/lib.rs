@@ -31,27 +31,27 @@ pub trait Digraph<'a,V,E> {
     fn new() -> Self;
     fn add_vertex(&mut self,V) -> Self::Vertex;
     fn add_edge(&mut self,E,Self::Vertex,Self::Vertex) -> Option<Self::Edge>;
-    fn remove_vertex<'t>(&'t mut self,&Self::Vertex);
-    fn remove_edge(&mut self,&Self::Edge);
+    fn remove_vertex<'t>(&'t mut self,Self::Vertex);
+    fn remove_edge(&mut self,Self::Edge);
 
     fn num_vertices(&self) -> usize;
     fn num_edges(&self) -> usize;
-    fn edge_label(&self,&Self::Edge) -> Option<&E>;
-    fn edge_label_mut(&mut self,&Self::Edge) -> Option<&mut E>;
-    fn vertex_label(&self,&Self::Vertex) -> Option<&V>;
-    fn vertex_label_mut(&mut self,&Self::Vertex) -> Option<&mut V>;
-    fn source(&self,&Self::Edge) -> Self::Vertex;
-    fn target(&self,&Self::Edge) -> Self::Vertex;
+    fn edge_label(&self,Self::Edge) -> Option<&E>;
+    fn edge_label_mut(&mut self,Self::Edge) -> Option<&mut E>;
+    fn vertex_label(&self,Self::Vertex) -> Option<&V>;
+    fn vertex_label_mut(&mut self,Self::Vertex) -> Option<&mut V>;
+    fn source(&self,Self::Edge) -> Self::Vertex;
+    fn target(&self,Self::Edge) -> Self::Vertex;
 
     fn vertices(&'a self) -> Self::Vertices;
     fn edges(&'a self) -> Self::Edges;
 
-    fn in_degree(&'a self, &Self::Vertex) -> usize;
-    fn out_degree(&'a self, &Self::Vertex) -> usize;
-    fn degree(&'a self, &Self::Vertex) -> usize;
-    fn out_edges(&'a self, &Self::Vertex) -> Self::Incidence;
-    fn in_edges(&'a self, &Self::Vertex) -> Self::Incidence;
-    fn adjacent_vertices(&'a self, &Self::Vertex) -> Self::Adjacency;
+    fn in_degree(&'a self, Self::Vertex) -> usize;
+    fn out_degree(&'a self, Self::Vertex) -> usize;
+    fn degree(&'a self, Self::Vertex) -> usize;
+    fn out_edges(&'a self, Self::Vertex) -> Self::Incidence;
+    fn in_edges(&'a self, Self::Vertex) -> Self::Incidence;
+    fn adjacent_vertices(&'a self, Self::Vertex) -> Self::Adjacency;
 }
 
 impl Iterator for GraphAdjacency {
@@ -82,7 +82,7 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
         };
     }
 
-    fn add_vertex(&mut self, lb: V) -> GraphVertexDescriptor {
+    fn add_vertex(&mut self, lb: V) -> Self::Vertex {
         let n = self.next_vertex;
 
         self.next_vertex.0 += 1;
@@ -93,7 +93,7 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
         return n;
     }
 
-    fn add_edge(&mut self, lb: E, from: GraphVertexDescriptor, to: GraphVertexDescriptor) -> Option<GraphEdgeDescriptor> {
+    fn add_edge(&mut self, lb: E, from: Self::Vertex, to: Self::Vertex) -> Option<Self::Edge> {
         let e = self.next_edge;
 
         self.next_edge.0 += 1;
@@ -107,51 +107,51 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
         }
     }
 
-    fn remove_vertex(&mut self, v: &Self::Vertex) {
-        self.vertex_labels.remove(v);
+    fn remove_vertex(&mut self, v: Self::Vertex) {
+        self.vertex_labels.remove(&v);
 
-        let todel1 = match self.in_edges.get(v) {
+        let todel1 = match self.in_edges.get(&v) {
             Some(_v) => _v.iter().map(|&x| x.clone()).collect(),
             None => Vec::new()
         };
 
-        let todel2 = match self.out_edges.get(v) {
+        let todel2 = match self.out_edges.get(&v) {
             Some(_v) => _v.iter().map(|&x| x.clone()).collect(),
             None => Vec::new()
         };
 
         for e in todel1.iter() {
-            self.remove_edge(&e);
+            self.remove_edge(*e);
         }
 
         for e in todel2.iter() {
-            self.remove_edge(&e);
+            self.remove_edge(*e);
         }
 
-        self.out_edges.remove(v);
-        self.in_edges.remove(v);
+        self.out_edges.remove(&v);
+        self.in_edges.remove(&v);
     }
 
-    fn remove_edge(&mut self, e: &Self::Edge) {
-        self.edge_labels.remove(e);
+    fn remove_edge(&mut self, e: Self::Edge) {
+        self.edge_labels.remove(&e);
 
         let from = &self.source(e);
         let to = &self.target(e);
 
-        self.edges.remove(e);
+        self.edges.remove(&e);
 
-        if let Some(ie) = self.in_edges.get_mut(from) {
+        if let Some(ie) = self.in_edges.get_mut(&from) {
             loop {
-                match ie.iter().position(|x| x == e) {
+                match ie.iter().position(|&x| x == e) {
                     Some(i) => { ie.swap_remove(i); () },
                     None => break
                 }
             }
         }
 
-        if let Some(oe) = self.out_edges.get_mut(to) {
+        if let Some(oe) = self.out_edges.get_mut(&to) {
             loop {
-                match oe.iter().position(|x| x == e) {
+                match oe.iter().position(|&x| x == e) {
                     Some(i) => { oe.swap_remove(i); () },
                     None => break
                 }
@@ -167,20 +167,20 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
         return self.edge_labels.len();
     }
 
-    fn vertex_label(&self, n: &GraphVertexDescriptor) -> Option<&V> {
-        return self.vertex_labels.get(n);
+    fn vertex_label(&self, n: Self::Vertex) -> Option<&V> {
+        return self.vertex_labels.get(&n);
     }
 
-    fn vertex_label_mut(&mut self, n: &GraphVertexDescriptor) -> Option<&mut V> {
-        return self.vertex_labels.get_mut(n);
+    fn vertex_label_mut(&mut self, n: Self::Vertex) -> Option<&mut V> {
+        return self.vertex_labels.get_mut(&n);
     }
 
-    fn edge_label(&self, n: &GraphEdgeDescriptor) -> Option<&E> {
-        return self.edge_labels.get(n);
+    fn edge_label(&self, n: Self::Edge) -> Option<&E> {
+        return self.edge_labels.get(&n);
     }
 
-    fn edge_label_mut(&mut self, n: &GraphEdgeDescriptor) -> Option<&mut E> {
-        return self.edge_labels.get_mut(n);
+    fn edge_label_mut(&mut self, n: Self::Edge) -> Option<&mut E> {
+        return self.edge_labels.get_mut(&n);
     }
 
     fn vertices(&'a self) -> Self::Vertices {
@@ -191,44 +191,45 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
         return self.edge_labels.keys();
     }
 
-    fn out_degree(&self, v: &Self::Vertex) -> usize {
-        return self.out_edges.get(v).map_or(0,|ref x| x.len());
+    fn out_degree(&self, v: Self::Vertex) -> usize {
+        return self.out_edges.get(&v).map_or(0,|ref x| x.len());
     }
 
-    fn in_degree(&self, v: &Self::Vertex) -> usize {
-        return self.in_edges.get(v).map_or(0,|ref x| x.len());
+    fn in_degree(&self, v: Self::Vertex) -> usize {
+        return self.in_edges.get(&v).map_or(0,|ref x| x.len());
     }
 
-    fn degree(&self, v: &Self::Vertex) -> usize {
+    fn degree(&self, v: Self::Vertex) -> usize {
         return self.in_degree(v) + self.out_degree(v);
     }
 
-    fn source(&self, e: &Self::Edge) -> Self::Vertex {
-        return self.edges.get(e).unwrap().0;
+    fn source(&self, e: Self::Edge) -> Self::Vertex {
+        return self.edges.get(&e).unwrap().0;
     }
 
-    fn target(&self, e: &Self::Edge) -> Self::Vertex {
-        return self.edges.get(e).unwrap().1;
+    fn target(&self, e: Self::Edge) -> Self::Vertex {
+        return self.edges.get(&e).unwrap().1;
     }
 
-    fn out_edges(&'a self, v: &Self::Vertex) -> Self::Incidence {
-        return self.out_edges.get(v).unwrap().iter();
+    fn out_edges(&'a self, v: Self::Vertex) -> Self::Incidence {
+        return self.out_edges.get(&v).unwrap().iter();
     }
 
-    fn in_edges(&'a self, v: &Self::Vertex) -> Self::Incidence {
-        return self.in_edges.get(v).unwrap().iter();
+    fn in_edges(&'a self, v: Self::Vertex) -> Self::Incidence {
+        return self.in_edges.get(&v).unwrap().iter();
     }
 
-    fn adjacent_vertices(&self, v: &Self::Vertex) -> Self::Adjacency {
+    fn adjacent_vertices(&self, v: Self::Vertex) -> Self::Adjacency {
         return GraphAdjacency { adj: Box::new(
-            self.out_edges.get(v).unwrap().iter().map(&|&x| return self.target(&x)).chain(
-                self.in_edges.get(v).unwrap().iter().map(&|&x| return self.source(&x))).collect()) };
+            self.out_edges.get(&v).unwrap().iter().map(|&x| return self.target(x)).chain(
+                self.in_edges.get(&v).unwrap().iter().map(|&x| return self.source(x))).collect()) };
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn test_node_attribute()
@@ -239,10 +240,10 @@ mod test {
         let n2 = g.add_vertex(13);
         let n3 = g.add_vertex(1337);
 
-        assert!(g.vertices().any(|x| (&n1 != x) ^ (g.vertex_label(&x) == Some(&42))));
-        assert!(g.vertices().any(|x| (&n2 != x) ^ (g.vertex_label(&x) == Some(&13))));
-        assert!(g.vertices().any(|x| (&n3 != x) ^ (g.vertex_label(&x) == Some(&1337))));
-        assert!(g.vertices().any(|ref x| g.vertex_label(x) != Some(&69)));
+        assert!(g.vertices().any(|&x| (n1 != x) ^ (g.vertex_label(x) == Some(&42))));
+        assert!(g.vertices().any(|&x| (n2 != x) ^ (g.vertex_label(x) == Some(&13))));
+        assert!(g.vertices().any(|&x| (n3 != x) ^ (g.vertex_label(x) == Some(&1337))));
+        assert!(g.vertices().any(|&x| g.vertex_label(x) != Some(&69)));
     }
 
     #[test]
@@ -275,33 +276,33 @@ mod test {
         assert!(e12 != e31);
         assert!(e23 != e31);
 
-        assert!(g.vertex_label(&n1) == Some(&42));
-        assert!(g.vertex_label(&n2) == Some(&13));
-        assert!(g.vertex_label(&n3) == Some(&1337));
+        assert!(g.vertex_label(n1) == Some(&42));
+        assert!(g.vertex_label(n2) == Some(&13));
+        assert!(g.vertex_label(n3) == Some(&1337));
 
-        assert!(g.edge_label(&e12) == Some(&"a".to_string()));
-        assert!(g.edge_label(&e23) == Some(&"b".to_string()));
-        assert!(g.edge_label(&e31) == Some(&"c".to_string()));
+        assert!(g.edge_label(e12) == Some(&"a".to_string()));
+        assert!(g.edge_label(e23) == Some(&"b".to_string()));
+        assert!(g.edge_label(e31) == Some(&"c".to_string()));
 
         assert_eq!(3,g.num_edges());
         assert_eq!(3,g.num_vertices());
 
-        assert_eq!(g.source(&e12), n1);
-        assert_eq!(g.target(&e12), n2);
-        assert_eq!(g.source(&e23), n2);
-        assert_eq!(g.target(&e23), n3);
-        assert_eq!(g.source(&e31), n3);
-        assert_eq!(g.target(&e31), n1);
+        assert_eq!(g.source(e12), n1);
+        assert_eq!(g.target(e12), n2);
+        assert_eq!(g.source(e23), n2);
+        assert_eq!(g.target(e23), n3);
+        assert_eq!(g.source(e31), n3);
+        assert_eq!(g.target(e31), n1);
 
-        assert_eq!(g.out_degree(&n1), 1);
-        assert_eq!(g.out_degree(&n2), 1);
-        assert_eq!(g.out_degree(&n3), 1);
+        assert_eq!(g.out_degree(n1), 1);
+        assert_eq!(g.out_degree(n2), 1);
+        assert_eq!(g.out_degree(n3), 1);
 
-        g.remove_edge(&e12);
+        g.remove_edge(e12);
 
-        g.remove_vertex(&n1);
-        g.remove_vertex(&n2);
-        g.remove_vertex(&n3);
+        g.remove_vertex(n1);
+        g.remove_vertex(n2);
+        g.remove_vertex(n3);
 
         assert_eq!(g.num_vertices(), 0);
         assert_eq!(g.num_edges(), 0);
@@ -323,28 +324,28 @@ mod test {
         };
         assert!(g.add_edge("a".to_string(),n3,n1) != None);
 
-        assert_eq!(g.in_degree(&n1),1);
-        assert_eq!(g.in_degree(&n2),1);
-        assert_eq!(g.in_degree(&n3),1);
+        assert_eq!(g.in_degree(n1),1);
+        assert_eq!(g.in_degree(n2),1);
+        assert_eq!(g.in_degree(n3),1);
 
-        assert_eq!(g.out_degree(&n1),1);
-        assert_eq!(g.out_degree(&n2),1);
-        assert_eq!(g.out_degree(&n3),1);
+        assert_eq!(g.out_degree(n1),1);
+        assert_eq!(g.out_degree(n2),1);
+        assert_eq!(g.out_degree(n3),1);
 
         let n4 = g.add_vertex(Some(42));
         assert!(g.add_edge("d".to_string(),n4,n1) != None);
 
-        assert_eq!(g.in_degree(&n1),2);
-        assert_eq!(g.in_degree(&n2),1);
-        assert_eq!(g.in_degree(&n3),1);
-        assert_eq!(g.in_degree(&n4),0);
+        assert_eq!(g.in_degree(n1),2);
+        assert_eq!(g.in_degree(n2),1);
+        assert_eq!(g.in_degree(n3),1);
+        assert_eq!(g.in_degree(n4),0);
 
-        assert_eq!(g.out_degree(&n1),1);
-        assert_eq!(g.out_degree(&n2),1);
-        assert_eq!(g.out_degree(&n3),1);
-        assert_eq!(g.out_degree(&n4),1);
+        assert_eq!(g.out_degree(n1),1);
+        assert_eq!(g.out_degree(n2),1);
+        assert_eq!(g.out_degree(n3),1);
+        assert_eq!(g.out_degree(n4),1);
 
-        g.remove_edge(&e23);
+        g.remove_edge(e23);
         g.add_edge("d1".to_string(),n3,n2);
 
         let n5 = g.add_vertex(None);
@@ -352,176 +353,172 @@ mod test {
         g.add_edge("d2".to_string(),n5,n3);
         g.add_edge("d2".to_string(),n5,n4);
 
-        assert_eq!(g.in_degree(&n1),2);
-        assert_eq!(g.in_degree(&n2),2);
-        assert_eq!(g.in_degree(&n3),1);
-        assert_eq!(g.in_degree(&n4),1);
-        assert_eq!(g.in_degree(&n5),1);
+        assert_eq!(g.in_degree(n1),2);
+        assert_eq!(g.in_degree(n2),2);
+        assert_eq!(g.in_degree(n3),1);
+        assert_eq!(g.in_degree(n4),1);
+        assert_eq!(g.in_degree(n5),1);
 
-        assert_eq!(g.out_degree(&n1),1);
-        assert_eq!(g.out_degree(&n2),1);
-        assert_eq!(g.out_degree(&n3),2);
-        assert_eq!(g.out_degree(&n4),1);
-        assert_eq!(g.out_degree(&n5),2);
+        assert_eq!(g.out_degree(n1),1);
+        assert_eq!(g.out_degree(n2),1);
+        assert_eq!(g.out_degree(n3),2);
+        assert_eq!(g.out_degree(n4),1);
+        assert_eq!(g.out_degree(n5),2);
 
         assert_eq!(g.edges().len(),7);
     }
 
-    /*#[test]
+    #[test]
     fn test_out_iterator()
     {
-        po::digraph<int,std::string> g;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g);
-        auto n2 = add_vertex(13,g);
-        auto n3 = add_vertex(1337,g);
-        auto n4 = add_vertex(99,g);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(1337);
+        let n4 = g.add_vertex(99);
 
-        auto e12 = add_edge(string("a"),n1,n2,g);
-        auto e23 = add_edge(string("b"),n2,n3,g);
-        auto e21 = add_edge(string("c"),n2,n1,g);
-        auto e14 = add_edge(string("d"),n1,n4,g);
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e23 = g.add_edge("b".to_string(),n2,n3);
+        let e21 = g.add_edge("c".to_string(),n2,n1);
+        let e14 = g.add_edge("d".to_string(),n1,n4);
 
-        auto i = out_edges(n1,g);
-        ASSERT_TRUE((*i.first == e12 && *(i.first + 1) == e14) || (*i.first == e14 && *(i.first + 1) == e12));
-        ASSERT_EQ(i.first + 2, i.second);
+        assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        i = out_edges(n2,g);
-        ASSERT_TRUE((*i.first == e23 && *(i.first + 1) == e21) || (*i.first == e21 && *(i.first + 1) == e23));
-        ASSERT_EQ(i.first + 2, i.second);
+        let i = g.out_edges(n1).collect::<Vec<&GraphEdgeDescriptor>>();
+        assert!(i == vec![&e12.unwrap(),&e14.unwrap()] ||
+                i == vec![&e14.unwrap(),&e12.unwrap()]);
 
-        i = out_edges(n3,g);
-        ASSERT_EQ(i.first, i.second);
+        let i = g.out_edges(n2).collect::<Vec<&GraphEdgeDescriptor>>();
+        assert!(i == vec![&e23.unwrap(),&e21.unwrap()] ||
+                i == vec![&e21.unwrap(),&e23.unwrap()]);
 
-        i = out_edges(n4,g);
-        ASSERT_EQ(i.first, i.second);
+        assert_eq!(g.out_edges(n3).next(), None);
+        assert_eq!(g.out_edges(n4).next(), None);
     }
 
     #[test]
     fn test_in_iterator()
     {
-        po::digraph<int,std::string> g;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g);
-        auto n2 = add_vertex(13,g);
-        auto n3 = add_vertex(1337,g);
-        auto n4 = add_vertex(99,g);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(1337);
+        let n4 = g.add_vertex(99);
 
-        auto e12 = add_edge(string("a"),n1,n2,g);
-        auto e23 = add_edge(string("b"),n2,n3,g);
-        auto e21 = add_edge(string("c"),n2,n1,g);
-        auto e14 = add_edge(string("d"),n1,n4,g);
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e23 = g.add_edge("b".to_string(),n2,n3);
+        let e21 = g.add_edge("c".to_string(),n2,n1);
+        let e14 = g.add_edge("d".to_string(),n1,n4);
 
-        auto i = in_edges(n1,g);
-        ASSERT_TRUE(*i.first == e21);
-        ASSERT_EQ(i.first + 1, i.second);
+        assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        i = in_edges(n2,g);
-        ASSERT_TRUE(*i.first == e12);
-        ASSERT_EQ(i.first + 1, i.second);
+        let i = g.out_edges(n1).collect::<Vec<&GraphEdgeDescriptor>>();
+        assert!(i == vec![&e21.unwrap()]);
 
-        i = in_edges(n3,g);
-        ASSERT_TRUE(*i.first == e23);
-        ASSERT_EQ(i.first + 1, i.second);
+        let i = g.in_edges(n2).collect::<Vec<&GraphEdgeDescriptor>>();
+        assert!(i == vec![&e12.unwrap()]);
 
-        i = in_edges(n4,g);
-        ASSERT_TRUE(*i.first == e14);
-        ASSERT_EQ(i.first + 1, i.second);
+        let i = g.in_edges(n3).collect::<Vec<&GraphEdgeDescriptor>>();
+        assert!(i == vec![&e23.unwrap()]);
+
+        let i = g.in_edges(n4).collect::<Vec<&GraphEdgeDescriptor>>();
+        assert!(i == vec![&e14.unwrap()]);
     }
 
     #[test]
     fn test_adj_iterator()
     {
-        po::digraph<int,std::string> g;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g);
-        auto n2 = add_vertex(13,g);
-        auto n3 = add_vertex(1337,g);
-        auto n4 = add_vertex(99,g);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(1337);
+        let n4 = g.add_vertex(99);
 
-        add_edge(string("a"),n1,n2,g);
-        add_edge(string("b"),n2,n3,g);
-        add_edge(string("c"),n2,n1,g);
-        add_edge(string("d"),n1,n4,g);
+        g.add_edge("a".to_string(),n1,n2);
+        g.add_edge("b".to_string(),n2,n3);
+        g.add_edge("c".to_string(),n2,n1);
+        g.add_edge("d".to_string(),n1,n4);
 
-        auto i = adjacent_vertices(n1,g);
-        ASSERT_TRUE((*i.first == n2 && *(i.first + 1) == n4) || (*i.first == n4 && *(i.first + 1) == n2));
-        ASSERT_EQ(std::distance(i.first ,i.second), 2);
+        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        assert!(i == vec![n2,n4] || i == vec![n4,n2]);
 
-        i = adjacent_vertices(n2,g);
-        ASSERT_TRUE((*i.first == n1 && *(i.first + 1) == n3) || (*i.first == n3 && *(i.first + 1) == n1));
-        ASSERT_EQ(std::distance(i.first ,i.second), 2);
+        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        assert!(i == vec![n1,n3] || i == vec![n3,n1]);
 
-        i = adjacent_vertices(n3,g);
-        ASSERT_TRUE(*i.first == n2);
-        ASSERT_EQ(std::distance(i.first ,i.second), 1);
+        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        assert!(i == vec![n2]);
 
-        i = adjacent_vertices(n4,g);
-        ASSERT_TRUE(*i.first == n1);
-        ASSERT_EQ(std::distance(i.first ,i.second), 1);
+        let i = g.adjacent_vertices(n1).collect::<Vec<GraphVertexDescriptor>>();
+        assert!(i == vec![n1]);
     }
 
     #[test]
-    fn test_iterators()
+    fn test_vertices_edges_iterators()
     {
-        po::digraph<int,std::string> g;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g);
-        auto n2 = add_vertex(13,g);
-        auto n3 = add_vertex(1337,g);
-        auto n4 = add_vertex(99,g);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(1337);
+        let n4 = g.add_vertex(99);
 
-        add_edge(string("a"),n1,n2,g);
-        add_edge(string("b"),n2,n3,g);
-        add_edge(string("c"),n2,n1,g);
-        add_edge(string("d"),n1,n4,g);
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e23 = g.add_edge("b".to_string(),n2,n3);
+        let e21 = g.add_edge("c".to_string(),n2,n1);
+        let e14 = g.add_edge("d".to_string(),n1,n4);
 
-        auto i = vertices(g);
-        std::set<decltype(g)::vertex_descriptor> ns;
-        std::for_each(i.first,i.second,[&](const decltype(g)::vertex_descriptor &n) { ASSERT_TRUE(ns.insert(n).second); });
+        assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        auto j = edges(g);
-        std::set<decltype(g)::edge_descriptor> es;
-        std::for_each(j.first,j.second,[&](const decltype(g)::edge_descriptor &n) { ASSERT_TRUE(es.insert(n).second); });
+        let vs = g.vertices().collect::<HashSet<&GraphVertexDescriptor>>();
+        assert!(vs.contains(&n1) && vs.contains(&n2) && vs.contains(&n3) && vs.contains(&n4));
+        assert_eq!(vs.len(), 4);
 
-        ASSERT_EQ(ns.size(), 4u);
-        ASSERT_EQ(es.size(), 4u);
+        let es = g.edges().collect::<HashSet<&GraphEdgeDescriptor>>();
+        assert!(es.contains(&e12.unwrap()) && es.contains(&e23.unwrap()) &&
+                es.contains(&e21.unwrap()) && es.contains(&e14.unwrap()));
+        assert_eq!(es.len(), 4);
     }
 
     #[test]
-    fn test_error()
+    fn test_duplicate_label()
     {
-        po::digraph<int,std::string> g1,g2;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g1);
-        auto n2 = add_vertex(13,g1);
-        add_vertex(13,g1);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(13);
 
-        add_edge(string("a"),n1,n2,g1);
-        add_edge(string("b"),n1,n2,g1);
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e23 = g.add_edge("b".to_string(),n2,n3);
 
-        ASSERT_EQ(num_edges(g1), 2u);
-        ASSERT_EQ(num_vertices(g1), 3u);
+        assert!(e12.is_some() && e23.is_some());
+
+        assert_eq!(g.num_vertices(), 3);
+        assert_eq!(g.num_edges(), 2);
     }
 
     #[test]
     fn test_remove_edge_from_node_with_multiple_out_edges()
     {
-        po::digraph<int,std::string> g;
+        let mut g = Graph::<isize,String>::new();
 
-        auto n1 = add_vertex(42,g);
-        auto n2 = add_vertex(13,g);
-        auto n3 = add_vertex(12,g);
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(12);
 
-        auto e12 = add_edge(string("a"),n1,n2,g);
-        add_edge(string("b"),n1,n3,g);
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e13 = g.add_edge("b".to_string(),n1,n3);
 
-        ASSERT_EQ(num_edges(g), 2u);
-        ASSERT_EQ(num_vertices(g), 3u);
-        ASSERT_EQ(out_degree(n1,g), 2u);
+        assert!(e12.is_some() && e13.is_some());
 
-        remove_edge(e12,g);
+        assert_eq!(g.num_edges(), 2);
+        assert_eq!(g.num_vertices(), 3);
 
-        ASSERT_EQ(out_degree(n1,g), 1u);
-    }*/
+        g.remove_edge(e12.unwrap());
+
+        assert_eq!(g.out_degree(n1), 1);
+    }
 }
