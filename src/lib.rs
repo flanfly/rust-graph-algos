@@ -3,9 +3,9 @@ use std::slice::Iter;
 use std::clone::Clone;
 
 #[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
-struct GraphVertexDescriptor(pub usize);
+pub struct GraphVertexDescriptor(pub usize);
 #[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
-struct GraphEdgeDescriptor(pub usize);
+pub struct GraphEdgeDescriptor(pub usize);
 
 pub struct Graph<N,E> {
     vertex_labels:  HashMap<GraphVertexDescriptor,N>,
@@ -242,10 +242,10 @@ mod test {
         let n2 = g.add_vertex(13);
         let n3 = g.add_vertex(1337);
 
-        assert!(g.vertices().any(|&x| (n1 != x) ^ (g.vertex_label(x) == Some(&42))));
-        assert!(g.vertices().any(|&x| (n2 != x) ^ (g.vertex_label(x) == Some(&13))));
-        assert!(g.vertices().any(|&x| (n3 != x) ^ (g.vertex_label(x) == Some(&1337))));
-        assert!(g.vertices().any(|&x| g.vertex_label(x) != Some(&69)));
+        assert!(g.vertices().any(|x| (n1 != x) ^ (g.vertex_label(x) == Some(&42))));
+        assert!(g.vertices().any(|x| (n2 != x) ^ (g.vertex_label(x) == Some(&13))));
+        assert!(g.vertices().any(|x| (n3 != x) ^ (g.vertex_label(x) == Some(&1337))));
+        assert!(g.vertices().any(|x| g.vertex_label(x) != Some(&69)));
     }
 
     #[test]
@@ -257,18 +257,11 @@ mod test {
         let n2 = g.add_vertex(13);
         let n3 = g.add_vertex(1337);
 
-        let e12 = match g.add_edge("a".to_string(),n1,n2) {
-            Some(x) => x,
-            None => { assert!(false); Graph::Edge(0) }
-        };
-        let e23 = match g.add_edge("b".to_string(),n2,n3) {
-            Some(x) => x,
-            None => { assert!(false); Graph::Edge(0) }
-        };
-        let e31 = match g.add_edge("c".to_string(),n3,n1) {
-            Some(x) => x,
-            None => { assert!(false); Graph::Edge(0) }
-        };
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e23 = g.add_edge("b".to_string(),n2,n3);
+        let e31 = g.add_edge("c".to_string(),n3,n1);
+
+        assert!(e12.is_some() && e23.is_some() && e31.is_some());
 
         assert!(n1 != n2);
         assert!(n1 != n3);
@@ -282,25 +275,25 @@ mod test {
         assert!(g.vertex_label(n2) == Some(&13));
         assert!(g.vertex_label(n3) == Some(&1337));
 
-        assert!(g.edge_label(e12) == Some(&"a".to_string()));
-        assert!(g.edge_label(e23) == Some(&"b".to_string()));
-        assert!(g.edge_label(e31) == Some(&"c".to_string()));
+        assert!(g.edge_label(e12.unwrap()) == Some(&"a".to_string()));
+        assert!(g.edge_label(e23.unwrap()) == Some(&"b".to_string()));
+        assert!(g.edge_label(e31.unwrap()) == Some(&"c".to_string()));
 
         assert_eq!(3,g.num_edges());
         assert_eq!(3,g.num_vertices());
 
-        assert_eq!(g.source(e12), n1);
-        assert_eq!(g.target(e12), n2);
-        assert_eq!(g.source(e23), n2);
-        assert_eq!(g.target(e23), n3);
-        assert_eq!(g.source(e31), n3);
-        assert_eq!(g.target(e31), n1);
+        assert_eq!(g.source(e12.unwrap()), n1);
+        assert_eq!(g.target(e12.unwrap()), n2);
+        assert_eq!(g.source(e23.unwrap()), n2);
+        assert_eq!(g.target(e23.unwrap()), n3);
+        assert_eq!(g.source(e31.unwrap()), n3);
+        assert_eq!(g.target(e31.unwrap()), n1);
 
         assert_eq!(g.out_degree(n1), 1);
         assert_eq!(g.out_degree(n2), 1);
         assert_eq!(g.out_degree(n3), 1);
 
-        g.remove_edge(e12);
+        g.remove_edge(e12.unwrap());
 
         g.remove_vertex(n1);
         g.remove_vertex(n2);
@@ -320,10 +313,9 @@ mod test {
         let n3 = g.add_vertex(Some(42));
 
         assert!(g.add_edge("a".to_string(),n1,n2) != None);
-        let e23 = match g.add_edge("a".to_string(),n2,n3) {
-            Some(x) => x,
-            None => { assert!(false); Graph::Edge(0) }
-        };
+        let e23 = g.add_edge("a".to_string(),n2,n3);
+
+        assert!(e23.is_some());
         assert!(g.add_edge("a".to_string(),n3,n1) != None);
 
         assert_eq!(g.in_degree(n1),1);
@@ -347,7 +339,7 @@ mod test {
         assert_eq!(g.out_degree(n3),1);
         assert_eq!(g.out_degree(n4),1);
 
-        g.remove_edge(e23);
+        g.remove_edge(e23.unwrap());
         g.add_edge("d1".to_string(),n3,n2);
 
         let n5 = g.add_vertex(None);
@@ -387,13 +379,15 @@ mod test {
 
         assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        let i = g.out_edges(n1).collect::<Vec<&Graph::Edge>>();
-        assert!(i == vec![&e12.unwrap(),&e14.unwrap()] ||
-                i == vec![&e14.unwrap(),&e12.unwrap()]);
+        type EdgeVec<'a> = Vec<<Graph<isize,String> as Digraph<'a,isize,String>>::Edge>;
 
-        let i = g.out_edges(n2).collect::<Vec<&Graph::Edge>>();
-        assert!(i == vec![&e23.unwrap(),&e21.unwrap()] ||
-                i == vec![&e21.unwrap(),&e23.unwrap()]);
+        let i = g.out_edges(n1).collect::<EdgeVec>();
+        assert!(i == vec![e12.unwrap(),e14.unwrap()] ||
+                i == vec![e14.unwrap(),e12.unwrap()]);
+
+        let i = g.out_edges(n2).collect::<EdgeVec>();
+        assert!(i == vec![e23.unwrap(),e21.unwrap()] ||
+                i == vec![e21.unwrap(),e23.unwrap()]);
 
         assert_eq!(g.out_edges(n3).next(), None);
         assert_eq!(g.out_edges(n4).next(), None);
@@ -416,17 +410,19 @@ mod test {
 
         assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        let i = g.out_edges(n1).collect::<Vec<&Graph::Edge>>();
-        assert!(i == vec![&e21.unwrap()]);
+        type EdgeVec<'a> = Vec<<Graph<isize,String> as Digraph<'a,isize,String>>::Edge>;
 
-        let i = g.in_edges(n2).collect::<Vec<&Graph::Edge>>();
-        assert!(i == vec![&e12.unwrap()]);
+        let i = g.out_edges(n1).collect::<EdgeVec>();
+        assert!(i == vec![e21.unwrap()]);
 
-        let i = g.in_edges(n3).collect::<Vec<&Graph::Edge>>();
-        assert!(i == vec![&e23.unwrap()]);
+        let i = g.in_edges(n2).collect::<EdgeVec>();
+        assert!(i == vec![e12.unwrap()]);
 
-        let i = g.in_edges(n4).collect::<Vec<&Graph::Edge>>();
-        assert!(i == vec![&e14.unwrap()]);
+        let i = g.in_edges(n3).collect::<EdgeVec>();
+        assert!(i == vec![e23.unwrap()]);
+
+        let i = g.in_edges(n4).collect::<EdgeVec>();
+        assert!(i == vec![e14.unwrap()]);
     }
 
     #[test]
@@ -444,16 +440,18 @@ mod test {
         g.add_edge("c".to_string(),n2,n1);
         g.add_edge("d".to_string(),n1,n4);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
+        type VertexVec<'a> = Vec<<Graph<isize,String> as Digraph<'a,isize,String>>::Vertex>;
+
+        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
         assert!(i == vec![n2,n4] || i == vec![n4,n2]);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
+        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
         assert!(i == vec![n1,n3] || i == vec![n3,n1]);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
+        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
         assert!(i == vec![n2]);
 
-        let i = g.adjacent_vertices(n1).collect::<Vec<Graph::Vertex>>();
+        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
         assert!(i == vec![n1]);
     }
 
@@ -474,11 +472,14 @@ mod test {
 
         assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
 
-        let vs = g.vertices().collect::<HashSet<&Graph::Vertex>>();
+        type EdgeSet<'a> = HashSet<<Graph<isize,String> as Digraph<'a,isize,String>>::Edge>;
+        type VertexSet<'a> = HashSet<<Graph<isize,String> as Digraph<'a,isize,String>>::Vertex>;
+
+        let vs = g.vertices().collect::<VertexSet>();
         assert!(vs.contains(&n1) && vs.contains(&n2) && vs.contains(&n3) && vs.contains(&n4));
         assert_eq!(vs.len(), 4);
 
-        let es = g.edges().collect::<HashSet<&Graph::Edge>>();
+        let es = g.edges().collect::<EdgeSet>();
         assert!(es.contains(&e12.unwrap()) && es.contains(&e23.unwrap()) &&
                 es.contains(&e21.unwrap()) && es.contains(&e14.unwrap()));
         assert_eq!(es.len(), 4);

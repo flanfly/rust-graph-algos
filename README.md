@@ -1,5 +1,5 @@
-The Rust Graph Library
-======================
+The Rust Graph Algorithms Library
+================================
 
 Port of the excellent [Boost Graph Library](http://www.boost.org/doc/libs/1_58_0/libs/graph/doc/) to Rust.
 
