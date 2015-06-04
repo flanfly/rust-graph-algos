@@ -552,4 +552,38 @@ mod test {
 
         assert_eq!(g.out_degree(n1), 1);
     }
+
+    #[test]
+    fn test_edge() {
+        let mut g = AdjacencyList::<isize,String>::new();
+
+        let n1 = g.add_vertex(42);
+        let n2 = g.add_vertex(13);
+        let n3 = g.add_vertex(1337);
+        let n4 = g.add_vertex(99);
+
+        let e12 = g.add_edge("a".to_string(),n1,n2);
+        let e23 = g.add_edge("b".to_string(),n2,n3);
+        let e21 = g.add_edge("c".to_string(),n2,n1);
+        let e14 = g.add_edge("d".to_string(),n1,n4);
+
+        assert!(e12.is_some() && e23.is_some() && e21.is_some() && e14.is_some());
+
+        assert_eq!(g.edge(n1,n1), None);
+        assert_eq!(g.edge(n1,n2), e12);
+        assert_eq!(g.edge(n1,n3), None);
+        assert_eq!(g.edge(n1,n4), e14);
+        assert_eq!(g.edge(n2,n1), e21);
+        assert_eq!(g.edge(n2,n2), None);
+        assert_eq!(g.edge(n2,n3), e23);
+        assert_eq!(g.edge(n2,n4), None);
+        assert_eq!(g.edge(n3,n1), None);
+        assert_eq!(g.edge(n3,n2), None);
+        assert_eq!(g.edge(n3,n3), None);
+        assert_eq!(g.edge(n3,n4), None);
+        assert_eq!(g.edge(n4,n1), None);
+        assert_eq!(g.edge(n4,n2), None);
+        assert_eq!(g.edge(n4,n3), None);
+        assert_eq!(g.edge(n4,n4), None);
+    }
 }
