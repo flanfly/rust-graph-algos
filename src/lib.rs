@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::slice::Iter;
 use std::clone::Clone;
+use std::hash::Hash;
 
-#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
+#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug,PartialOrd,Ord)]
 pub struct GraphVertexDescriptor(pub usize);
-#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug)]
+#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug,PartialOrd,Ord)]
 pub struct GraphEdgeDescriptor(pub usize);
 
 pub struct Graph<N,E> {
@@ -22,8 +23,8 @@ pub struct GraphAdjacency {
 }
 
 pub trait Digraph<'a,V,E> {
-    type Vertex;
-    type Edge;
+    type Vertex: Clone + Hash + PartialEq + Eq + Ord;
+    type Edge: Clone + Hash + PartialEq + Eq;
     type Vertices: Iterator<Item=Self::Vertex>;
     type Edges: Iterator<Item=Self::Edge>;
     type Incidence: Iterator<Item=Self::Edge>;
@@ -32,8 +33,8 @@ pub trait Digraph<'a,V,E> {
     fn new() -> Self;
     fn add_vertex(&mut self,V) -> Self::Vertex;
     fn add_edge(&mut self,E,Self::Vertex,Self::Vertex) -> Option<Self::Edge>;
-    fn remove_vertex<'t>(&'t mut self,Self::Vertex);
-    fn remove_edge(&mut self,Self::Edge);
+    fn remove_vertex<'t>(&'t mut self,Self::Vertex) -> Option<V>;
+    fn remove_edge(&mut self,Self::Edge) -> Option<E>;
 
     fn num_vertices(&self) -> usize;
     fn num_edges(&self) -> usize;
@@ -95,69 +96,100 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
     }
 
     fn add_edge(&mut self, lb: E, from: Self::Vertex, to: Self::Vertex) -> Option<Self::Edge> {
-        let e = self.next_edge;
-
-        self.next_edge.0 += 1;
-        self.edge_labels.insert(e,lb);
-        self.edges.insert(e,(from,to));
-
         if self.vertex_labels.contains_key(&from) && self.vertex_labels.contains_key(&to) {
-            return Some(e);
+            let e = self.next_edge;
+
+            self.next_edge.0 += 1;
+            self.edge_labels.insert(e,lb);
+            self.edges.insert(e,(from,to));
+
+            let ie = self.in_edges.get_mut(&to);
+            let oe = self.out_edges.get_mut(&from);
+
+            if ie.is_some() && oe.is_some() {
+                ie.unwrap().push(e);
+                oe.unwrap().push(e);
+                return Some(e);
+            } else {
+                return None;
+            }
         } else {
             return None;
         }
     }
 
-    fn remove_vertex(&mut self, v: Self::Vertex) {
-        self.vertex_labels.remove(&v);
+    fn remove_vertex(&mut self, v: Self::Vertex) -> Option<V> {
+        let ret = self.vertex_labels.remove(&v);
 
-        let todel1 = match self.in_edges.get(&v) {
-            Some(_v) => _v.iter().map(|&x| x.clone()).collect(),
-            None => Vec::new()
-        };
+        if ret.is_some() {
+            let todel1 = match self.in_edges.get(&v) {
+                Some(_v) => _v.iter().map(|&x| x.clone()).collect(),
+                None => Vec::new()
+            };
 
-        let todel2 = match self.out_edges.get(&v) {
-            Some(_v) => _v.iter().map(|&x| x.clone()).collect(),
-            None => Vec::new()
-        };
+            let todel2 = match self.out_edges.get(&v) {
+                Some(_v) => _v.iter().map(|&x| x.clone()).collect(),
+                None => Vec::new()
+            };
 
-        for e in todel1.iter() {
-            self.remove_edge(*e);
+            for e in todel1.iter() {
+                if !self.remove_edge(*e).is_some() {
+                    return None;
+                }
+            }
+
+            for e in todel2.iter() {
+                if !self.remove_edge(*e).is_some() {
+                    return None;
+                }
+            }
+
+            if self.out_edges.remove(&v).is_some() &&
+               self.in_edges.remove(&v).is_some() {
+                    return ret;
+            }
         }
 
-        for e in todel2.iter() {
-            self.remove_edge(*e);
-        }
-
-        self.out_edges.remove(&v);
-        self.in_edges.remove(&v);
+        return None;
     }
 
-    fn remove_edge(&mut self, e: Self::Edge) {
-        self.edge_labels.remove(&e);
+    fn remove_edge(&mut self, e: Self::Edge) -> Option<E> {
+        let ret = self.edge_labels.remove(&e);
 
-        let from = &self.source(e);
-        let to = &self.target(e);
+        if ret.is_some() {
+            let from = &self.source(e);
+            let to = &self.target(e);
 
-        self.edges.remove(&e);
+            if !self.edges.remove(&e).is_some() {
+                return None;
+            }
 
-        if let Some(ie) = self.in_edges.get_mut(&from) {
-            loop {
-                match ie.iter().position(|&x| x == e) {
-                    Some(i) => { ie.swap_remove(i); () },
-                    None => break
+            let rm_adj = |cont: Option<&mut Vec<GraphEdgeDescriptor>>,e| -> bool {
+                match cont {
+                    None => return false,
+                    Some(cont) => {
+                        let o = cont.iter().position(|&x| x == e);
+
+                        if o.is_some() {
+                            if cont.swap_remove(o.unwrap()) != e {
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
                 }
+            };
+
+            if rm_adj(self.out_edges.get_mut(&from),e) &&
+               rm_adj(self.in_edges.get_mut(&to),e) {
+                return ret;
             }
         }
 
-        if let Some(oe) = self.out_edges.get_mut(&to) {
-            loop {
-                match oe.iter().position(|&x| x == e) {
-                    Some(i) => { oe.swap_remove(i); () },
-                    None => break
-                }
-            }
-        }
+        return None;
     }
 
     fn num_vertices(&self) -> usize {
@@ -193,11 +225,11 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
     }
 
     fn out_degree(&self, v: Self::Vertex) -> usize {
-        return self.out_edges.get(&v).map_or(0,|ref x| x.len());
+        return self.out_edges.get(&v).map_or(0,|ref x| return x.len());
     }
 
     fn in_degree(&self, v: Self::Vertex) -> usize {
-        return self.in_edges.get(&v).map_or(0,|ref x| x.len());
+        return self.in_edges.get(&v).map_or(0,|ref x| return x.len());
     }
 
     fn degree(&self, v: Self::Vertex) -> usize {
@@ -221,9 +253,14 @@ impl<'a,V,E> Digraph<'a,V,E> for Graph<V,E> {
     }
 
     fn adjacent_vertices(&self, v: Self::Vertex) -> Self::Adjacency {
-        return GraphAdjacency { adj: Box::new(
-            self.out_edges.get(&v).unwrap().iter().map(|&x| return self.target(x)).chain(
-                self.in_edges.get(&v).unwrap().iter().map(|&x| return self.source(x))).collect()) };
+        let i = self.out_edges.get(&v).unwrap().iter().map(|&x| return self.target(x));
+        let o = self.in_edges.get(&v).unwrap().iter().map(|&x| return self.source(x));
+        let mut raw = i.chain(o).collect::<Vec<GraphVertexDescriptor>>();
+
+        raw.sort();
+        raw.dedup();
+
+        return GraphAdjacency { adj: Box::new(raw) };
     }
 
 }
@@ -293,11 +330,11 @@ mod test {
         assert_eq!(g.out_degree(n2), 1);
         assert_eq!(g.out_degree(n3), 1);
 
-        g.remove_edge(e12.unwrap());
+        assert!(g.remove_edge(e12.unwrap()).is_some());
 
-        g.remove_vertex(n1);
-        g.remove_vertex(n2);
-        g.remove_vertex(n3);
+        assert!(g.remove_vertex(n1).is_some());
+        assert!(g.remove_vertex(n2).is_some());
+        assert!(g.remove_vertex(n3).is_some());
 
         assert_eq!(g.num_vertices(), 0);
         assert_eq!(g.num_edges(), 0);
@@ -339,7 +376,7 @@ mod test {
         assert_eq!(g.out_degree(n3),1);
         assert_eq!(g.out_degree(n4),1);
 
-        g.remove_edge(e23.unwrap());
+        assert!(g.remove_edge(e23.unwrap()).is_some());
         g.add_edge("d1".to_string(),n3,n2);
 
         let n5 = g.add_vertex(None);
@@ -412,7 +449,7 @@ mod test {
 
         type EdgeVec<'a> = Vec<<Graph<isize,String> as Digraph<'a,isize,String>>::Edge>;
 
-        let i = g.out_edges(n1).collect::<EdgeVec>();
+        let i = g.in_edges(n1).collect::<EdgeVec>();
         assert!(i == vec![e21.unwrap()]);
 
         let i = g.in_edges(n2).collect::<EdgeVec>();
@@ -445,13 +482,13 @@ mod test {
         let i = g.adjacent_vertices(n1).collect::<VertexVec>();
         assert!(i == vec![n2,n4] || i == vec![n4,n2]);
 
-        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
+        let i = g.adjacent_vertices(n2).collect::<VertexVec>();
         assert!(i == vec![n1,n3] || i == vec![n3,n1]);
 
-        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
+        let i = g.adjacent_vertices(n3).collect::<VertexVec>();
         assert!(i == vec![n2]);
 
-        let i = g.adjacent_vertices(n1).collect::<VertexVec>();
+        let i = g.adjacent_vertices(n4).collect::<VertexVec>();
         assert!(i == vec![n1]);
     }
 
@@ -520,7 +557,7 @@ mod test {
         assert_eq!(g.num_edges(), 2);
         assert_eq!(g.num_vertices(), 3);
 
-        g.remove_edge(e12.unwrap());
+        assert!(g.remove_edge(e12.unwrap()).is_some());
 
         assert_eq!(g.out_degree(n1), 1);
     }

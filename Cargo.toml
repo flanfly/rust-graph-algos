@@ -1,4 +1,4 @@
 [package]
-name = "rgl"
-version = "0.1.0"
+name = "graph-algo"
+version = "0.2.0"
 authors = ["seu <seu@panopticon.re>"]
