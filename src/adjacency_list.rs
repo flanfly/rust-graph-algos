@@ -49,10 +49,6 @@ impl<V,E> AdjacencyList<V,E> {
 impl<'a,V,E> Graph<'a,V,E> for AdjacencyList<V,E> {
     type Vertex = AdjacencyListVertexDescriptor;
     type Edge = AdjacencyListEdgeDescriptor;
-    type Vertices = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Vertex, V>,fn(&Self::Vertex) -> Self::Vertex>;
-    type Edges = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Edge, E>,fn(&Self::Edge) -> Self::Edge>;
-    type Incidence = std::iter::Map<std::slice::Iter<'a, Self::Edge>,fn(&Self::Edge) -> Self::Edge>;
-    type Adjacency = AdjacencyListAdjacency;
 
     fn vertex_label(&self, n: Self::Vertex) -> Option<&V> {
         return self.vertex_labels.get(&n);
@@ -72,6 +68,8 @@ impl<'a,V,E> Graph<'a,V,E> for AdjacencyList<V,E> {
 }
 
 impl<'a,V,E> IncidenceGraph<'a,V,E> for AdjacencyList<V,E> {
+    type Incidence = std::iter::Map<std::slice::Iter<'a, Self::Edge>,fn(&Self::Edge) -> Self::Edge>;
+
     fn out_degree(&self, v: Self::Vertex) -> usize {
         return self.out_edges.get(&v).map_or(0,|ref x| return x.len());
     }
@@ -96,6 +94,8 @@ impl<'a,V,E> BidirectionalGraph<'a,V,E> for AdjacencyList<V,E> {
 }
 
 impl<'a,V,E> AdjacencyGraph<'a,V,E> for AdjacencyList<V,E> {
+    type Adjacency = AdjacencyListAdjacency;
+
     fn adjacent_vertices(&self, v: Self::Vertex) -> Self::Adjacency {
         let i = self.out_edges.get(&v).unwrap().iter().map(|&x| return self.target(x));
         let o = self.in_edges.get(&v).unwrap().iter().map(|&x| return self.source(x));
@@ -109,6 +109,8 @@ impl<'a,V,E> AdjacencyGraph<'a,V,E> for AdjacencyList<V,E> {
 }
 
 impl<'a,V,E> VertexListGraph<'a,V,E> for AdjacencyList<V,E> {
+    type Vertices = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Vertex, V>,fn(&Self::Vertex) -> Self::Vertex>;
+
     fn num_vertices(&self) -> usize {
         return self.vertex_labels.len();
     }
@@ -119,6 +121,8 @@ impl<'a,V,E> VertexListGraph<'a,V,E> for AdjacencyList<V,E> {
 }
 
 impl<'a,V,E> EdgeListGraph<'a,V,E> for AdjacencyList<V,E> {
+    type Edges = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Edge, E>,fn(&Self::Edge) -> Self::Edge>;
+
     fn num_edges(&self) -> usize {
         return self.edge_labels.len();
     }

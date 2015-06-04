@@ -1,12 +1,8 @@
 use std::hash::Hash;
 
 pub trait Graph<'a,V,E> {
-    type Vertex: Clone + Hash + PartialEq + Eq + Ord;
-    type Edge: Clone + Hash + PartialEq + Eq;
-    type Vertices: Iterator<Item=Self::Vertex>;
-    type Edges: Iterator<Item=Self::Edge>;
-    type Incidence: Iterator<Item=Self::Edge>;
-    type Adjacency: Iterator<Item=Self::Vertex>;
+    type Vertex: Clone + Hash + PartialEq + Eq + Ord + Copy;
+    type Edge: Clone + Hash + PartialEq + Eq + Copy;
 
     fn edge_label(&self,Self::Edge) -> Option<&E>;
     fn vertex_label(&self,Self::Vertex) -> Option<&V>;
@@ -15,6 +11,7 @@ pub trait Graph<'a,V,E> {
 }
 
 pub trait IncidenceGraph<'a,V,E>: Graph<'a,V,E> {
+    type Incidence: Iterator<Item=Self::Edge>;
     fn out_degree(&'a self, Self::Vertex) -> usize;
     fn out_edges(&'a self, Self::Vertex) -> Self::Incidence;
 }
@@ -26,15 +23,18 @@ pub trait BidirectionalGraph<'a,V,E>: IncidenceGraph<'a,V,E> {
 }
 
 pub trait AdjacencyGraph<'a,V,E>: Graph<'a,V,E> {
+    type Adjacency: Iterator<Item=Self::Vertex>;
     fn adjacent_vertices(&'a self, Self::Vertex) -> Self::Adjacency;
 }
 
 pub trait VertexListGraph<'a,V,E>: IncidenceGraph<'a,V,E> + AdjacencyGraph<'a,V,E> {
+    type Vertices: Iterator<Item=Self::Vertex>;
     fn vertices(&'a self) -> Self::Vertices;
     fn num_vertices(&self) -> usize;
 }
 
 pub trait EdgeListGraph<'a,V,E>: Graph<'a,V,E> {
+    type Edges: Iterator<Item=Self::Edge>;
     fn num_edges(&self) -> usize;
     fn edges(&'a self) -> Self::Edges;
 }
