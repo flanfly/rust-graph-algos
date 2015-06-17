@@ -1,7 +1,3 @@
-#![crate_name = "graph_algos"]
-#![crate_type = "lib"]
-#![crate_type = "rlib"]
-
 pub mod traits;
 pub mod adjacency_list;
 pub mod adjacency_matrix;
@@ -10,10 +6,10 @@ pub use adjacency_list::AdjacencyList;
 pub use adjacency_matrix::AdjacencyMatrix;
 
 pub use traits::Graph as GraphTrait;
-pub use traits::AdjacencyGraph;
-pub use traits::IncidenceGraph;
-pub use traits::BidirectionalGraph;
-pub use traits::VertexListGraph;
-pub use traits::EdgeListGraph;
-pub use traits::MutableGraph;
-pub use traits::AdjacencyMatrixGraph;
+pub use traits::AdjacencyGraph as AdjacencyGraphTrait;
+pub use traits::IncidenceGraph as IncidenceGraphTrait;
+pub use traits::BidirectionalGraph as BidirectionalGraphTrait;
+pub use traits::VertexListGraph as VertexListGraphTrait;
+pub use traits::EdgeListGraph as EdgeListGraphTrait;
+pub use traits::MutableGraph as MutableGraphTrait;
+pub use traits::AdjacencyMatrixGraph as AdjacencyMatrixGraphTrait;
