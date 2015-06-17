@@ -1,4 +1,4 @@
 [package]
-name = "graph-algo"
+name = "graph-algos"
 version = "0.4.0"
 authors = ["seu <seu@panopticon.re>"]
