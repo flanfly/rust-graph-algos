@@ -2,6 +2,8 @@ pub mod traits;
 pub mod adjacency_list;
 pub mod adjacency_matrix;
 
+extern crate rustc_serialize;
+
 pub use adjacency_list::AdjacencyList;
 pub use adjacency_matrix::AdjacencyMatrix;
 
