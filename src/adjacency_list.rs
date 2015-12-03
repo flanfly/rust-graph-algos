@@ -135,7 +135,7 @@ impl<'a,V,E> AdjacencyGraph<'a,V,E> for AdjacencyList<V,E> {
     }
 }
 
-impl<'a,V,E> VertexListGraph<'a,V,E> for AdjacencyList<V,E> {
+impl<'a,V: 'a,E> VertexListGraph<'a,V,E> for AdjacencyList<V,E> {
     type Vertices = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Vertex, V>,fn(&Self::Vertex) -> Self::Vertex>;
 
     fn num_vertices(&self) -> usize {
@@ -147,7 +147,7 @@ impl<'a,V,E> VertexListGraph<'a,V,E> for AdjacencyList<V,E> {
     }
 }
 
-impl<'a,V,E> EdgeListGraph<'a,V,E> for AdjacencyList<V,E> {
+impl<'a,V,E: 'a> EdgeListGraph<'a,V,E> for AdjacencyList<V,E> {
     type Edges = std::iter::Map<std::collections::hash_map::Keys<'a, Self::Edge, E>,fn(&Self::Edge) -> Self::Edge>;
 
     fn num_edges(&self) -> usize {

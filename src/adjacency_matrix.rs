@@ -162,6 +162,7 @@ impl<'a,V,E> VertexListGraph<'a,V,E> for AdjacencyMatrix<'a,V,E> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use traits::*;
