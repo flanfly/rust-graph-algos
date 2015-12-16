@@ -1,4 +1,5 @@
-pub mod traits;
+mod traits;
+pub mod search;
 pub mod adjacency_list;
 pub mod adjacency_matrix;
 
