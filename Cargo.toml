@@ -5,3 +5,4 @@ authors = ["seu <seu@panopticon.re>"]
 
 [dependencies]
 rustc-serialize = "*"
+bit-set = "*"

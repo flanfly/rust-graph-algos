@@ -1,9 +1,11 @@
 mod traits;
 pub mod search;
+pub mod dominator;
 pub mod adjacency_list;
 pub mod adjacency_matrix;
 
 extern crate rustc_serialize;
+extern crate bit_set;
 
 pub use adjacency_list::AdjacencyList;
 pub use adjacency_matrix::AdjacencyMatrix;
