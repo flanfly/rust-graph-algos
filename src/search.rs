@@ -183,12 +183,6 @@ pub fn depth_first_visit<'a, V, E, G: 'a + Graph<'a,V,E> + IncidenceGraph<'a,V,E
     }
 
     visit::<V,E,G>(start,&mut color,vertex_visitor,edge_visitor,graph);
-
-    for v in graph.vertices() {
-        if color[&v] == VertexColor::White {
-            visit::<V,E,G>(&v,&mut color,vertex_visitor,edge_visitor,graph);
-        }
-    }
 }
 
 #[cfg(test)]
