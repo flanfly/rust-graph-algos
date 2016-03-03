@@ -19,7 +19,7 @@ pub fn dominators<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<'a,V,E> +
     let mut fixpoint = false;
     let mut all_set = BitSet::new();
 
-    for vx in (0..vertex_idx.len()) {
+    for vx in 0..vertex_idx.len() {
         all_set.insert(vx);
     }
 

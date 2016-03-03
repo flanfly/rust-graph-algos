@@ -1,6 +1,7 @@
 mod traits;
 pub mod search;
 pub mod dominator;
+pub mod order;
 pub mod adjacency_list;
 pub mod adjacency_matrix;
 
