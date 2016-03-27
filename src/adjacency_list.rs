@@ -1,6 +1,5 @@
 use std;
 use std::collections::HashMap;
-use std::slice::Iter;
 use std::clone::Clone;
 use rustc_serialize::*;
 use std::cmp::max;

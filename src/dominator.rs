@@ -186,8 +186,6 @@ mod tests {
 
         let dom = dominators(v1,&g);
 
-        println!("{:?}",dom);
-
         assert_eq!(dom.len(), 6);
         assert_eq!(dom[&v1], vec![v1]);
         assert_eq!(dom[&v2], vec![v1,v2]);
