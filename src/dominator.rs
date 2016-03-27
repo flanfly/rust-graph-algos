@@ -93,24 +93,22 @@ pub fn dominance_frontiers<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<
 
 /// Cooper, Harvey, Kennedy: "A Simple, Fast Dominance Algorithm"
 pub fn immediate_dominator<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<'a,V,E> + VertexListGraph<'a,V,E>>(start: G::Vertex, graph: &'a G) -> HashMap<G::Vertex,G::Vertex> {
-    let mut rev_postorder = TreeIterator::new(start,TraversalOrder::Postorder,graph).collect::<Vec<_>>();
-    rev_postorder.reverse();
-
-    let rpo_idx = HashMap::<G::Vertex,usize>::from_iter(rev_postorder.iter().enumerate().map(|(a,b)| (b.clone(),a)));
-    fn intersect<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<'a,V,E> + VertexListGraph<'a,V,E>>(p: G::Vertex,q: G::Vertex,rpo_idx: &HashMap<G::Vertex,usize>, rev_postorder: &Vec<G::Vertex>, ret: &HashMap<G::Vertex,G::Vertex> ) -> G::Vertex {
-        let mut f1 = rpo_idx[&p];
-        let mut f2 = rpo_idx[&q];
+    let postorder = TreeIterator::new(start,TraversalOrder::Postorder,graph).collect::<Vec<_>>();
+    let po_idx = HashMap::<G::Vertex,usize>::from_iter(postorder.iter().enumerate().map(|(a,b)| (b.clone(),a)));
+    fn intersect<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<'a,V,E> + VertexListGraph<'a,V,E>>(b1: G::Vertex,b2: G::Vertex,po_idx: &HashMap<G::Vertex,usize>, postorder: &Vec<G::Vertex>, ret: &HashMap<G::Vertex,G::Vertex> ) -> G::Vertex {
+        let mut f1 = po_idx[&b1];
+        let mut f2 = po_idx[&b2];
 
         while f1 != f2 {
-            while f1 > f2 {
-                f1 = rpo_idx[&ret[&rev_postorder[f1]]];
-            }
             while f1 < f2 {
-                f2 = rpo_idx[&ret[&rev_postorder[f2]]];
+                f1 = po_idx[&ret[&postorder[f1]]];
+            }
+            while f2 < f1 {
+                f2 = po_idx[&ret[&postorder[f2]]];
             }
         }
 
-        rev_postorder[f1]
+        postorder[f1]
     };
 
     let mut ret = HashMap::<G::Vertex,G::Vertex>::new();
@@ -121,27 +119,26 @@ pub fn immediate_dominator<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<
     while !fixpoint {
         fixpoint = true;
 
-        for b in rev_postorder.iter().filter(|&&v| v != start) {
-            let mut new_idom = None;
+        for b in postorder.iter().rev().filter(|&&v| v != start) {
+            let pred = {
+                let mut ret = graph.in_edges(*b)
+                                   .map(|e| graph.source(e))
+                                   .filter(|&x| x != *b)
+                                   .collect::<Vec<G::Vertex>>();
+                ret.sort();
+                ret.dedup();
+                ret
+            };
+            let mut new_idom = *pred.iter().find(|&x| ret.contains_key(x)).unwrap();
 
-            for e in graph.in_edges(*b) {
-                let p = graph.source(e);
-
-                if p != *b {
-                    if let Some(ref mut d) = new_idom {
-                        if ret.contains_key(&p) {
-                            *d = intersect::<V,E,G>(p,*d,&rpo_idx,&rev_postorder,&ret);
-                        }
-                    } else {
-                        new_idom = Some(p);
-                    }
+            for p in pred.iter().filter(move |&&x| x != new_idom) {
+                if ret.contains_key(&p) {
+                    new_idom = intersect::<V,E,G>(*p,new_idom,&po_idx,&postorder,&ret);
                 }
             }
 
-            assert!(new_idom.is_some());
-
-            if ret.get(b) != new_idom.as_ref() {
-                ret.insert(*b,new_idom.unwrap());
+            if ret.get(b) != Some(&new_idom) {
+                ret.insert(*b,new_idom);
                 fixpoint = false;
             }
         }
@@ -220,11 +217,20 @@ mod tests {
         assert_eq!(doms[&v4], v6);
         assert_eq!(doms[&v5], v6);
         assert_eq!(doms[&v6], v6);
+
+        let mut g2 = AdjacencyList::<usize,()>::new();
+        let v7 = g2.add_vertex(7);
+        g2.add_edge((),v7,v7);
+        let doms2 = immediate_dominator(v7,&g2);
+
+        assert_eq!(doms2.len(), 1);
+        assert_eq!(doms2[&v7], v7);
     }
 
     #[test]
-    fn frontiers() {
+    fn issue_5() {
         let mut g = AdjacencyList::<usize,()>::new();
+
         let v0 = g.add_vertex(0);
         let v1 = g.add_vertex(1);
         let v2 = g.add_vertex(2);
@@ -234,31 +240,66 @@ mod tests {
         let v6 = g.add_vertex(6);
         let v7 = g.add_vertex(7);
         let v8 = g.add_vertex(8);
+        let v9 = g.add_vertex(9);
+        let v10 = g.add_vertex(10);
+        let v11 = g.add_vertex(11);
 
-        g.add_edge((),v0,v1);
-        g.add_edge((),v1,v2);
-        g.add_edge((),v1,v5);
-        g.add_edge((),v5,v6);
-        g.add_edge((),v5,v8);
+        g.add_edge((),v0,v2);
         g.add_edge((),v6,v7);
-        g.add_edge((),v8,v7);
-        g.add_edge((),v2,v3);
-        g.add_edge((),v7,v3);
+        g.add_edge((),v4,v3);
+        g.add_edge((),v1,v9);
+        g.add_edge((),v5,v7);
         g.add_edge((),v3,v4);
-        g.add_edge((),v3,v1);
+        g.add_edge((),v10,v11);
+        g.add_edge((),v9,v0);
+        g.add_edge((),v7,v6);
+        g.add_edge((),v2,v4);
+        g.add_edge((),v11,v11);
+        g.add_edge((),v4,v5);
+        g.add_edge((),v8,v10);
+        g.add_edge((),v7,v8);
 
-        let idom = immediate_dominator(v0,&g);
+        let doms = immediate_dominator(v1,&g);
+
+        assert_eq!(doms.len(), 12);
+    }
+
+    #[test]
+    fn frontiers() {
+        let mut g = AdjacencyList::<usize,()>::new();
+        let a = g.add_vertex(0);
+        let b = g.add_vertex(1);
+        let c = g.add_vertex(2);
+        let d = g.add_vertex(3);
+        let e = g.add_vertex(4);
+        let f = g.add_vertex(5);
+
+        g.add_edge((),a,b);
+        g.add_edge((),b,c);
+        g.add_edge((),b,d);
+        g.add_edge((),c,e);
+        g.add_edge((),d,e);
+        g.add_edge((),e,f);
+        g.add_edge((),a,f);
+
+        let idom = immediate_dominator(a,&g);
+
+        assert_eq!(idom.len(), 6);
+        assert_eq!(idom[&a], a);
+        assert_eq!(idom[&b], a);
+        assert_eq!(idom[&c], b);
+        assert_eq!(idom[&d], b);
+        assert_eq!(idom[&e], b);
+        assert_eq!(idom[&f], a);
+
         let fron = dominance_frontiers(&idom,&g);
 
-        assert_eq!(fron.len(), 9);
-        assert_eq!(fron[&v0], vec![]);
-        assert_eq!(fron[&v1], vec![v1]);
-        assert_eq!(fron[&v2], vec![v3]);
-        assert_eq!(fron[&v3], vec![v1]);
-        assert_eq!(fron[&v4], vec![]);
-        assert_eq!(fron[&v5], vec![v3]);
-        assert_eq!(fron[&v6], vec![v7]);
-        assert_eq!(fron[&v7], vec![v3]);
-        assert_eq!(fron[&v8], vec![v7]);
+        assert_eq!(fron.len(), 6);
+        assert_eq!(fron[&a], vec![]);
+        assert_eq!(fron[&b], vec![f]);
+        assert_eq!(fron[&c], vec![e]);
+        assert_eq!(fron[&d], vec![e]);
+        assert_eq!(fron[&e], vec![f]);
+        assert_eq!(fron[&f], vec![]);
     }
 }
