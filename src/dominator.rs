@@ -70,9 +70,18 @@ pub fn dominance_frontiers<'a, V, E, G: 'a + Graph<'a,V,E> + BidirectionalGraph<
     let mut ret = HashMap::<G::Vertex,Vec<G::Vertex>>::from_iter(graph.vertices().map(|v| (v,vec![])));
 
     for b in graph.vertices() {
-        if graph.in_degree(b) >= 2 {
-            for e in graph.in_edges(b) {
-                let p = graph.source(e);
+        let pred = {
+            let mut ret = graph.in_edges(b)
+                               .map(|e| graph.source(e))
+                               .filter(|&x| x != b)
+                               .collect::<Vec<G::Vertex>>();
+            ret.sort();
+            ret.dedup();
+            ret
+        };
+
+        if pred.len() >= 2 {
+            for p in pred {
                 let mut runner = p;
 
                 while runner != idom[&b] {
