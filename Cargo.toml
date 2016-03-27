@@ -1,6 +1,6 @@
 [package]
 name = "graph_algos"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["seu <seu@panopticon.re>"]
 
 [dependencies]
