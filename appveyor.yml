@@ -1,22 +1,17 @@
-os: unstable
-version: 0.13.0-{build}
-platform:
-  - x64
 environment:
-  RUST_INSTALL_DIR: C:\Rust
   matrix:
-    - RUST_INSTALL_TRIPLE: x86_64-pc-windows-msvc
-      RUST_VERSION: 1.7.0
+  - TARGET: x86_64-pc-windows-msvc
+#  - TARGET: i686-pc-windows-msvc
+#  - TARGET: i686-pc-windows-gnu
 install:
-   # Rust
-  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-$Env:RUST_VERSION-$Env:RUST_INSTALL_TRIPLE.exe"
-  - cmd: rust-%RUST_VERSION%-%RUST_INSTALL_TRIPLE%.exe /VERYSILENT /NORESTART /COMPONENTS="rust,cargo" /DIR="%RUST_INSTALL_DIR%"
-  - cmd: SET PATH=%PATH%;%RUST_INSTALL_DIR%\bin
-  - rustc --version
-  - cargo --version
-build_script:
-  - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x64
-  - cargo build --verbose
+  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.7.0-${env:TARGET}.exe"
+  - rust-1.7.0-%TARGET%.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
+  - SET PATH=%PATH%;C:\MinGW\bin
+  - rustc -V
+  - cargo -V
+
+build: false
+
 test_script:
-  - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x64
   - cargo test --verbose
