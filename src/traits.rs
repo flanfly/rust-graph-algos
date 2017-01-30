@@ -5,6 +5,7 @@ pub trait Graph<'a,V,E> {
     type Edge: Clone + Hash + PartialEq + Eq + Copy;
 
     fn edge_label(&self,Self::Edge) -> Option<&E>;
+    #[inline]
     fn vertex_label(&self,Self::Vertex) -> Option<&V>;
     fn source(&self,Self::Edge) -> Self::Vertex;
     fn target(&self,Self::Edge) -> Self::Vertex;
