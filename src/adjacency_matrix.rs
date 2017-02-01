@@ -7,6 +7,7 @@ pub struct AdjacencyMatrixEdgeDescriptor {
     to: usize,
 }
 
+#[derive(Debug)]
 pub struct AdjacencyMatrix<'a,V:'a,E:'a> {
     edges: &'a [&'a [Option<E>]],
     vertex_labels: &'a [V],
@@ -54,6 +55,7 @@ impl<'a,V,E> AdjacencyMatrixGraph<'a,V,E> for AdjacencyMatrix<'a,V,E> {
     }
 }
 
+#[derive(Debug)]
 pub struct AdjacencyMatrixNeight<'a,V:'a,E:'a> {
     fix: usize,
     var: Range<usize>,
@@ -123,6 +125,7 @@ impl<'a,V,E> BidirectionalGraph<'a,V,E> for AdjacencyMatrix<'a,V,E> {
     }
 }
 
+#[derive(Debug)]
 pub struct AdjacencyMatrixAdjacency {
     adj: Box<Vec<usize>>
 }

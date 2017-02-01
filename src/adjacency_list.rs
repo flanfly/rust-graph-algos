@@ -36,7 +36,7 @@ impl Encodable for AdjacencyListEdgeDescriptor {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AdjacencyList<N,E> {
     vertex_labels:  HashMap<AdjacencyListVertexDescriptor,N>,
     edge_labels:    HashMap<AdjacencyListEdgeDescriptor,E>,
@@ -47,6 +47,7 @@ pub struct AdjacencyList<N,E> {
     next_vertex:    AdjacencyListVertexDescriptor
 }
 
+#[derive(Debug)]
 pub struct AdjacencyListAdjacency {
     adj: Box<Vec<AdjacencyListVertexDescriptor>>
 }
@@ -77,6 +78,7 @@ impl<'a,V,E> Graph<'a,V,E> for AdjacencyList<V,E> {
     type Vertex = AdjacencyListVertexDescriptor;
     type Edge = AdjacencyListEdgeDescriptor;
 
+    #[inline]
     fn vertex_label(&self, n: Self::Vertex) -> Option<&V> {
         return self.vertex_labels.get(&n);
     }
