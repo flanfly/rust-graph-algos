@@ -4,5 +4,6 @@ version = "0.11.0"
 authors = ["seu <seu@panopticon.re>"]
 
 [dependencies]
-rustc-serialize = "*"
+serde = "0.9.6"
+serde_derive = "0.9.6"
 bit-set = "*"
