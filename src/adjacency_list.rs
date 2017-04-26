@@ -268,7 +268,6 @@ mod test {
     use super::*;
     use traits::*;
     use std::collections::HashSet;
-    use rustc_serialize::json;
 
     #[test]
     fn test_node_attribute()
