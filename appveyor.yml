@@ -8,7 +8,7 @@ environment:
       RUST_VERSION: stable
     - RUST_INSTALL_TRIPLE: x86_64-pc-windows-msvc
       RUST_VERSION: nightly
-  install:
+install:
   # Rust & Qt
   - set PATH=%USERPROFILE%\.cargo\bin;%PATH%
   - set PATH=%PATH%;C:\MinGW\bin
