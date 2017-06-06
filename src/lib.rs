@@ -5,7 +5,10 @@ pub mod order;
 pub mod adjacency_list;
 pub mod adjacency_matrix;
 
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
 extern crate bit_set;
 
 pub use adjacency_list::AdjacencyList;

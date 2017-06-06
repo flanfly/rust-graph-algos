@@ -1,42 +1,16 @@
 use std;
 use std::collections::HashMap;
 use std::clone::Clone;
-use rustc_serialize::*;
-use std::cmp::max;
 
 use traits::*;
 
-#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug,PartialOrd,Ord)]
+#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug,PartialOrd,Ord,Serialize,Deserialize)]
 pub struct AdjacencyListVertexDescriptor(pub usize);
 
-impl Decodable for AdjacencyListVertexDescriptor {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Ok(AdjacencyListVertexDescriptor(try!(d.read_usize())))
-    }
-}
-
-impl Encodable for AdjacencyListVertexDescriptor {
-    fn encode<D: Encoder>(&self,d: &mut D) -> Result<(), D::Error> {
-        d.emit_usize(self.0)
-    }
-}
-
-#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug,PartialOrd,Ord)]
+#[derive(PartialEq,Eq,Hash,Copy,Clone,Debug,PartialOrd,Ord,Serialize,Deserialize)]
 pub struct AdjacencyListEdgeDescriptor(pub usize);
 
-impl Decodable for AdjacencyListEdgeDescriptor {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Ok(AdjacencyListEdgeDescriptor(try!(d.read_usize())))
-    }
-}
-
-impl Encodable for AdjacencyListEdgeDescriptor {
-    fn encode<D: Encoder>(&self,d: &mut D) -> Result<(), D::Error> {
-        d.emit_usize(self.0)
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct AdjacencyList<N,E> {
     vertex_labels:  HashMap<AdjacencyListVertexDescriptor,N>,
     edge_labels:    HashMap<AdjacencyListEdgeDescriptor,E>,
@@ -47,7 +21,7 @@ pub struct AdjacencyList<N,E> {
     next_vertex:    AdjacencyListVertexDescriptor
 }
 
-#[derive(Debug)]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct AdjacencyListAdjacency {
     adj: Box<Vec<AdjacencyListVertexDescriptor>>
 }
@@ -289,94 +263,10 @@ impl<'a,V,E> MutableGraph<'a,V,E> for AdjacencyList<V,E> {
     }
 }
 
-impl<V,E> Decodable for AdjacencyList<V,E> where V: Decodable, E: Decodable {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        d.read_struct("AdjacencyList",3,|d| {
-            let vets: HashMap<usize,V> = try!(d.read_struct_field("vertices",0,|d| Decodable::decode(d)));
-            let edgs: HashMap<usize,E> = try!(d.read_struct_field("edges",1,|d| Decodable::decode(d)));
-            let conn: HashMap<usize,(usize,usize)> = try!(d.read_struct_field("conn", 2, |d| Decodable::decode(d)));
-            let mut vertex_labels = HashMap::<AdjacencyListVertexDescriptor,V>::new();
-            let mut edge_labels = HashMap::<AdjacencyListEdgeDescriptor,E>::new();
-            let mut out_edges = HashMap::<AdjacencyListVertexDescriptor,Vec<AdjacencyListEdgeDescriptor>>::new();
-            let mut in_edges = HashMap::<AdjacencyListVertexDescriptor,Vec<AdjacencyListEdgeDescriptor>>::new();
-            let mut edges = HashMap::<AdjacencyListEdgeDescriptor,(AdjacencyListVertexDescriptor,AdjacencyListVertexDescriptor)>::new();
-            let mut next_edge = 0usize;
-            let mut next_vertex = 0usize;
-
-            for v in vets {
-                let desc = AdjacencyListVertexDescriptor(v.0);
-                vertex_labels.insert(desc,v.1);
-                in_edges.insert(desc,vec![]);
-                out_edges.insert(desc,vec![]);
-                next_vertex = max(next_vertex,v.0);
-            }
-
-            for e in edgs {
-                edge_labels.insert(AdjacencyListEdgeDescriptor(e.0),e.1);
-                next_edge = max(next_edge,e.0);
-            }
-
-            for c in conn {
-                edges.insert(AdjacencyListEdgeDescriptor(c.0),(AdjacencyListVertexDescriptor((c.1).0),AdjacencyListVertexDescriptor((c.1).1)));
-                out_edges.get_mut(&AdjacencyListVertexDescriptor((c.1).0)).unwrap().push(AdjacencyListEdgeDescriptor(c.0));
-                in_edges.get_mut(&AdjacencyListVertexDescriptor((c.1).1)).unwrap().push(AdjacencyListEdgeDescriptor(c.0));
-            }
-
-            Ok(AdjacencyList{
-                vertex_labels: vertex_labels,
-                edge_labels: edge_labels,
-                out_edges: out_edges,
-                in_edges: in_edges,
-                edges: edges,
-                next_vertex: AdjacencyListVertexDescriptor(next_vertex + 1),
-                next_edge: AdjacencyListEdgeDescriptor(next_edge + 1),
-            })
-        })
-    }
-}
-
-impl<V,E> Encodable for AdjacencyList<V,E> where V: Encodable, E: Encodable {
-    fn encode<D: Encoder>(&self,d: &mut D) -> Result<(), D::Error> {
-        d.emit_struct("AdjacencyList", 3, |d| {
-            try!(d.emit_struct_field("vertices",0,|d| {
-                d.emit_map(self.vertex_labels.len(),|d| {
-                    for x in self.vertex_labels.iter().enumerate() {
-                        try!(d.emit_map_elt_key(x.0,|d| d.emit_usize(((x.1).0).0)));
-                        try!(d.emit_map_elt_val(x.0,|d| (x.1).1.encode(d)));
-                    }
-                    Ok(())
-                })
-            }));
-            try!(d.emit_struct_field("edges",1,|d| {
-                d.emit_map(self.edge_labels.len(),|d| {
-                    for x in self.edge_labels.iter().enumerate() {
-                        try!(d.emit_map_elt_key(x.0,|d| d.emit_usize(((x.1).0).0)));
-                        try!(d.emit_map_elt_val(x.0,|d| (x.1).1.encode(d)));
-                    }
-                    Ok(())
-                })
-            }));
-
-            try!(d.emit_struct_field("conn",2,|d| {
-                d.emit_map(self.edges.len(),|d| {
-                    for x in self.edges.iter().enumerate() {
-                        try!(d.emit_map_elt_key(x.0,|d| d.emit_usize(((x.1).0).0)));
-                        try!(d.emit_map_elt_val(x.0,|d| (x.1).1.encode(d)));
-                    }
-                    Ok(())
-                })
-            }));
-            Ok(())
-        })
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use traits::*;
     use std::collections::HashSet;
-    use rustc_serialize::json;
 
     #[test]
     fn test_node_attribute()
@@ -705,6 +595,8 @@ mod test {
 
     #[test]
     fn decodable() {
+        use serde_json;
+
         let mut g = AdjacencyList::<isize,String>::new();
 
         let n1 = g.add_vertex(42);
@@ -717,11 +609,11 @@ mod test {
         g.add_edge("c".to_string(),n2,n4);
         g.add_edge("xxx".to_string(),n4,n1);
 
-        let e = json::encode(&g);
+        let e = serde_json::to_string(&g);
 
         assert!(e.is_ok());
 
-        let g2: AdjacencyList<isize,String> = json::decode(&e.unwrap()).unwrap();
+        let g2: AdjacencyList<isize,String> = serde_json::from_str(&e.unwrap()).unwrap();
 
         assert_eq!(g2.num_vertices(), g.num_vertices());
         assert_eq!(g2.num_edges(), g.num_edges());
@@ -731,7 +623,7 @@ mod test {
         }
 
         let g3 = AdjacencyList::<(),f32>::new();
-        let e2 = json::encode(&g3);
+        let e2 = serde_json::to_string(&g3);
 
         assert!(e2.ok().is_some());
 
@@ -740,7 +632,7 @@ mod test {
         g4.add_vertex(42);
         g4.add_vertex(13);
 
-        let e3 = json::encode(&g4);
+        let e3 = serde_json::to_string(&g4);
 
         assert!(e3.ok().is_some());
     }
