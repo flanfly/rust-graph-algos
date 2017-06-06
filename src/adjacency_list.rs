@@ -266,7 +266,6 @@ impl<'a,V,E> MutableGraph<'a,V,E> for AdjacencyList<V,E> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use traits::*;
     use std::collections::HashSet;
 
     #[test]
@@ -596,6 +595,8 @@ mod test {
 
     #[test]
     fn decodable() {
+        use serde_json;
+
         let mut g = AdjacencyList::<isize,String>::new();
 
         let n1 = g.add_vertex(42);
@@ -608,11 +609,11 @@ mod test {
         g.add_edge("c".to_string(),n2,n4);
         g.add_edge("xxx".to_string(),n4,n1);
 
-        let e = json::encode(&g);
+        let e = serde_json::to_string(&g);
 
         assert!(e.is_ok());
 
-        let g2: AdjacencyList<isize,String> = json::decode(&e.unwrap()).unwrap();
+        let g2: AdjacencyList<isize,String> = serde_json::from_str(&e.unwrap()).unwrap();
 
         assert_eq!(g2.num_vertices(), g.num_vertices());
         assert_eq!(g2.num_edges(), g.num_edges());
@@ -622,7 +623,7 @@ mod test {
         }
 
         let g3 = AdjacencyList::<(),f32>::new();
-        let e2 = json::encode(&g3);
+        let e2 = serde_json::to_string(&g3);
 
         assert!(e2.ok().is_some());
 
@@ -631,7 +632,7 @@ mod test {
         g4.add_vertex(42);
         g4.add_vertex(13);
 
-        let e3 = json::encode(&g4);
+        let e3 = serde_json::to_string(&g4);
 
         assert!(e3.ok().is_some());
     }

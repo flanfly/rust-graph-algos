@@ -8,6 +8,7 @@ pub mod adjacency_matrix;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
+extern crate serde_json;
 extern crate bit_set;
 
 pub use adjacency_list::AdjacencyList;

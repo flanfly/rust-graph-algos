@@ -6,4 +6,5 @@ authors = ["seu <seu@panopticon.re>"]
 [dependencies]
 serde = "1"
 serde_derive = "1"
+serde_json = "1"
 bit-set = "*"
